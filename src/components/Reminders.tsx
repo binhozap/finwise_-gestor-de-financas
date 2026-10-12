@@ -22,20 +22,15 @@ export default function Reminders({ reminders = [], setReminders, categories = [
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('none');
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const sortedReminders = [...reminders].sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
 
   const togglePaid = (id: string) => {
-    const reminderToUpdate = reminders.find(r => r.id === id);
-    
-    // Confetti disabled because canvas-confetti is not installed in this environment.
-    if (reminderToUpdate && !reminderToUpdate.isPaid && reminderToUpdate.amount >= 500) {
-      // noop
-    }
-
     setReminders(prev => {
       const reminder = prev.find(r => r.id === id);
       if (!reminder || !reminder.dueDate) return prev;
+
       const isMarkingPaid = !reminder.isPaid;
       const today = format(new Date(), 'yyyy-MM-dd');
       
@@ -56,6 +51,7 @@ export default function Reminders({ reminders = [], setReminders, categories = [
           case 'weekly': nextDate = addWeeks(date, 1); break;
           case 'biweekly': nextDate = addWeeks(date, 2); break;
           case 'monthly': nextDate = addMonths(date, 1); break;
+          case 'quarterly': nextDate = addMonths(date, 3); break;
           case 'yearly': nextDate = addYears(date, 1); break;
           default: nextDate = date;
         }
@@ -274,6 +270,7 @@ export default function Reminders({ reminders = [], setReminders, categories = [
                       { id: 'weekly', label: 'Semanal', icon: Repeat },
                       { id: 'biweekly', label: '15 dias', icon: Repeat },
                       { id: 'monthly', label: 'Mensal', icon: Repeat },
+                      { id: 'quarterly', label: 'Trimestral', icon: Repeat },
                       { id: 'yearly', label: 'Anual', icon: Repeat },
                     ].map((freq) => (
                       <button
@@ -282,6 +279,7 @@ export default function Reminders({ reminders = [], setReminders, categories = [
                         onClick={() => setFrequency(freq.id as RecurrenceFrequency)}
                         className={cn(
                           "py-3 px-1 rounded-2xl border text-[10px] font-bold uppercase transition-all flex flex-col items-center justify-center gap-1",
+                          freq.id === 'none' && "col-span-3",
                           frequency === freq.id
                             ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
                             : "bg-slate-50 border-slate-100 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
@@ -305,6 +303,7 @@ export default function Reminders({ reminders = [], setReminders, categories = [
                           case 'weekly': next = addWeeks(date, 1); break;
                           case 'biweekly': next = addWeeks(date, 2); break;
                           case 'monthly': next = addMonths(date, 1); break;
+                          case 'quarterly': next = addMonths(date, 3); break;
                           case 'yearly': next = addYears(date, 1); break;
                           default: next = date;
                         }
@@ -349,75 +348,97 @@ export default function Reminders({ reminders = [], setReminders, categories = [
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       transition={{ duration: 0.2 }}
                       className={cn(
-                        "p-5 rounded-[2rem] border shadow-sm transition-all flex items-center justify-between group duration-300",
+                        "p-5 rounded-[2rem] border shadow-sm transition-all flex flex-col group duration-300 cursor-pointer hover:shadow-md",
                         "bg-white border-slate-200 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700"
                       )}
+                      onClick={() => setExpandedId(expandedId === bill.id ? null : bill.id)}
                     >
-                      <div className="flex items-center gap-4">
-                        <motion.button 
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => togglePaid(bill.id)}
-                          className={cn(
-                            "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm",
-                            "bg-slate-100 text-slate-400 hover:bg-blue-50 hover:text-blue-500 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
-                          )}
-                        >
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.2 }}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-4 flex-1">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); togglePaid(bill.id); }}
+                            className={cn(
+                              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm flex-shrink-0",
+                              "bg-slate-100 text-slate-400 hover:bg-blue-50 hover:text-blue-500 dark:bg-slate-800 dark:text-slate-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
+                            )}
                           >
                             <Circle size={24} />
-                          </motion.div>
-                        </motion.button>
-                        <div>
-                          <h4 className={cn(
-                            "font-bold text-sm transition-colors duration-300",
-                            "text-slate-800 dark:text-slate-200"
-                          )}>
-                            {bill.title}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                              <CategoryIcon name={categories.find(c => c.name === bill.category)?.icon} size={12} className="text-slate-400" />
-                              <p className="text-[10px] text-slate-300 font-bold uppercase">{bill.category}</p>
+                          </button>
+                          <div className="flex-1 overflow-hidden">
+                            <h4 className={cn(
+                              "font-bold text-sm transition-colors duration-300 truncate",
+                              "text-slate-800 dark:text-slate-200"
+                            )}>
+                              {bill.title}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter transition-colors">Vence {bill.dueDate ? format(parseISO(bill.dueDate), 'dd/MM/yyyy') : 'N/A'}</p>
+                              {bill.frequency && bill.frequency !== 'none' && (
+                                <>
+                                  <span className="w-1 h-1 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                                  <div className={cn(
+                                    "flex items-center gap-0.5 text-[10px] font-bold uppercase transition-colors shrink-0",
+                                    "text-blue-400 dark:text-blue-500"
+                                  )}>
+                                    <Repeat size={10} />
+                                    <span>{
+                                      bill.frequency === 'daily' ? 'Diário' :
+                                      bill.frequency === 'weekly' ? 'Semanal' : 
+                                      bill.frequency === 'biweekly' ? 'Quinzenal' :
+                                      bill.frequency === 'monthly' ? 'Mensal' :
+                                      bill.frequency === 'quarterly' ? 'Trimestral' : 'Anual'
+                                    }</span>
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            <span className="w-1 h-1 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter transition-colors">Vence {bill.dueDate}</p>
-                            {bill.frequency && bill.frequency !== 'none' && (
-                              <>
-                                <span className="w-1 h-1 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                                <div className={cn(
-                                  "flex items-center gap-0.5 text-[10px] font-bold uppercase transition-colors",
-                                  "text-blue-400 dark:text-blue-500"
-                                )}>
-                                  <Repeat size={10} />
-                                  <span>{
-                                    bill.frequency === 'daily' ? 'Diário' :
-                                    bill.frequency === 'weekly' ? 'Semanal' : 
-                                    bill.frequency === 'biweekly' ? 'Quinzenal' :
-                                    bill.frequency === 'monthly' ? 'Mensal' : 'Anual'
-                                  }</span>
-                                </div>
-                              </>
-                            )}
                           </div>
                         </div>
+                        <div className="text-right flex flex-col items-end pl-2">
+                          <p className={cn(
+                            "font-bold text-sm transition-colors duration-300",
+                            "text-slate-700 dark:text-slate-300"
+                          )}>
+                            {formatCurrency(bill.amount)}
+                          </p>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(bill.id); }}
+                            className="mt-1 flex items-center justify-center w-6 h-6 rounded-full text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:text-slate-700 dark:hover:text-rose-500 dark:hover:bg-rose-900/30 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-right flex flex-col items-end">
-                        <p className={cn(
-                          "font-bold text-sm transition-colors duration-300",
-                          "text-slate-700 dark:text-slate-300"
-                        )}>
-                          {formatCurrency(bill.amount)}
-                        </p>
-                        <button 
-                          onClick={() => setDeleteConfirmId(bill.id)}
-                          className="mt-1 text-slate-400 hover:text-rose-500 dark:text-slate-500 dark:hover:text-rose-500 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
+
+                      <AnimatePresence>
+                        {expandedId === bill.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                            animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                            className="overflow-hidden border-t border-slate-100 dark:border-slate-800 pt-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Categoria</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800">
+                                    <CategoryIcon name={categories.find(c => c.name === bill.category)?.icon} size={14} className="text-slate-500 dark:text-slate-400" />
+                                  </div>
+                                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{bill.category}</span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Data Original de Ref.</span>
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center h-full">
+                                  {bill.dueDate ? format(parseISO(bill.dueDate), 'dd/MM/yyyy') : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   ))
                 ) : (
@@ -457,44 +478,70 @@ export default function Reminders({ reminders = [], setReminders, categories = [
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
                       className={cn(
-                        "p-4 rounded-[1.5rem] border transition-all flex items-center justify-between opacity-80 duration-300",
+                        "p-4 rounded-[1.5rem] border transition-all flex flex-col opacity-80 duration-300 cursor-pointer hover:opacity-100",
                         "bg-emerald-50/30 border-emerald-100/50 dark:bg-emerald-900/10 dark:border-emerald-800/30"
                       )}
+                      onClick={() => setExpandedId(expandedId === bill.id ? null : bill.id)}
                     >
-                      <div className="flex items-center gap-4">
-                        <motion.button 
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => togglePaid(bill.id)}
-                          className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-inner",
-                            "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-500"
-                          )}
-                        >
-                          <motion.div
-                            initial={{ scale: 0.5, rotate: -45, opacity: 0 }}
-                            animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); togglePaid(bill.id); }}
+                            className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-inner",
+                              "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-500"
+                            )}
                           >
                             <CheckCircle2 size={20} />
-                          </motion.div>
-                        </motion.button>
-                        <div>
-                          <h4 className={cn(
-                            "font-bold text-xs line-through transition-colors duration-300",
-                            "text-slate-400 dark:text-slate-600"
-                          )}>
-                            {bill.title}
-                          </h4>
-                          <p className="text-[9px] text-slate-300 dark:text-slate-700 font-bold uppercase leading-none mt-0.5 transition-colors">
-                            {bill.paidAt ? `Pago em ${bill.paidAt}` : `Vencimento em ${bill.dueDate}`}
+                          </button>
+                          <div>
+                            <h4 className={cn(
+                              "font-bold text-xs line-through transition-colors duration-300",
+                              "text-slate-400 dark:text-slate-600"
+                            )}>
+                              {bill.title}
+                            </h4>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mt-1 transition-colors">
+                              {bill.paidAt ? `Pago em ${format(parseISO(bill.paidAt), 'dd/MM/yyyy')}` : `Vencimento em ${bill.dueDate ? format(parseISO(bill.dueDate), 'dd/MM/yyyy') : ''}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                          <p className="font-bold text-xs text-slate-500 dark:text-slate-700">
+                            {formatCurrency(bill.amount)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-xs text-slate-400 dark:text-slate-700">
-                          {formatCurrency(bill.amount)}
-                        </p>
-                      </div>
+
+                      <AnimatePresence>
+                        {expandedId === bill.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                            animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                            className="overflow-hidden border-t border-emerald-100/50 dark:border-emerald-800/30 pt-3"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Categoria</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1 rounded-lg bg-emerald-100/50 dark:bg-emerald-900/30">
+                                    <CategoryIcon name={categories.find(c => c.name === bill.category)?.icon} size={12} className="text-emerald-600 dark:text-emerald-500" />
+                                  </div>
+                                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{bill.category}</span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Data Original de Ref.</span>
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center h-full">
+                                  {bill.dueDate ? format(parseISO(bill.dueDate), 'dd/MM/yyyy') : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   ))
                 ) : (

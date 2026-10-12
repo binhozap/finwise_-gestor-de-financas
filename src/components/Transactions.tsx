@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, History, Trash2, Repeat, X } from 'lucide-react';
+import { Search, Filter, History, Trash2, Repeat, X, Cloud, ExternalLink, Receipt } from 'lucide-react';
 import { Transaction, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import CategoryIcon from './CategoryIcon';
-import Tooltip from './Tooltip';
 
 interface TransactionsProps {
   transactions: Transaction[];
@@ -77,35 +76,33 @@ export default function Transactions({ transactions = [], categories = [], onCle
             )}
           />
         </div>
-        <Tooltip content="Filtros Avançados">
-          <button 
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              "p-3 border rounded-2xl shadow-sm transition-all duration-300 relative",
-              showFilters 
-                ? "bg-blue-50 border-blue-100 text-blue-500 dark:bg-blue-900/30 dark:border-blue-800/50 dark:text-blue-400"
-                : "bg-white border-slate-100 text-slate-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400"
-            )}
-          >
-            <Filter size={18} />
-            {hasActiveFilters && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border-2 border-white dark:border-slate-950 rounded-full"></span>
-            )}
-          </button>
-        </Tooltip>
-        <Tooltip content="Limpar Histórico">
-          <button 
-            onClick={() => transactions.length > 0 && setShowConfirm(true)}
-            className={cn(
-              "p-3 border rounded-2xl shadow-sm transition-all duration-300",
-              transactions.length > 0 
-                ? "bg-rose-50 border-rose-100 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400"
-                : "bg-white border-slate-100 text-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-800 cursor-not-allowed"
-            )}
-          >
-            <Trash2 size={18} />
-          </button>
-        </Tooltip>
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          className={cn(
+            "p-3 border rounded-2xl shadow-sm transition-all duration-300 relative",
+            showFilters 
+              ? "bg-blue-50 border-blue-100 text-blue-500 dark:bg-blue-900/30 dark:border-blue-800/50 dark:text-blue-400"
+              : "bg-white border-slate-100 text-slate-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400"
+          )}
+          title="Filtros"
+        >
+          <Filter size={18} />
+          {hasActiveFilters && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border-2 border-white dark:border-slate-950 rounded-full"></span>
+          )}
+        </button>
+        <button 
+          onClick={() => transactions.length > 0 && setShowConfirm(true)}
+          className={cn(
+            "p-3 border rounded-2xl shadow-sm transition-all duration-300",
+            transactions.length > 0 
+              ? "bg-rose-50 border-rose-100 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400"
+              : "bg-white border-slate-100 text-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-700 cursor-not-allowed"
+          )}
+          title="Limpar Histórico"
+        >
+          <Trash2 size={18} />
+        </button>
       </div>
 
       <AnimatePresence>
@@ -261,6 +258,19 @@ export default function Transactions({ transactions = [], categories = [], onCle
                         {t.frequency && t.frequency !== 'none' && <Repeat size={10} className="text-blue-400" />}
                         {t.recurrenceId && <Repeat size={10} className="text-slate-200" />}
                       </p>
+                      {t.receiptUrl && (
+                        <a
+                          href={t.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Ver comprovante no Google Drive"
+                          className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight transition-colors flex items-center gap-1 bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60"
+                        >
+                          <Cloud size={10} />
+                          <span>Recibo</span>
+                          <ExternalLink size={8} />
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>

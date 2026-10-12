@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1068133120714",
+    "project_id": "gen-lang-client-0771620348",
+    "storage_bucket": "gen-lang-client-0771620348.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1068133120714:android:e533d5f0ba083c4d1a9233",
+        "android_client_info": {
+          "package_name": "com.FiWise"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1068133120714-2o969uqphde4fgi0rg7jbm3mvg7qf3dc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAX3AogKlTOct8M4O_vgCX7JL_oU2h1dwA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1068133120714-2o969uqphde4fgi0rg7jbm3mvg7qf3dc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

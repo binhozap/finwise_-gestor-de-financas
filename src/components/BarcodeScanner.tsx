@@ -43,7 +43,6 @@ export default function BarcodeScanner({ onResult, onClose }: BarcodeScannerProp
     <div className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4">
       <button 
         onClick={onClose}
-        aria-label="Fechar leitor de código de barras"
         className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white backdrop-blur-sm z-[70] hover:bg-white/20"
       >
         <X size={24} />

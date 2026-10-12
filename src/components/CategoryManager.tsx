@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'motion/react';
-import { Plus, Trash2, Edit2, X, Check, User, Sun, Moon, GripVertical, ChevronRight, ChevronDown, Upload, Palette, Sticker } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Check, User, Sun, Moon, GripVertical, ChevronRight, ChevronDown, Upload, Palette, Sticker, Cloud, HardDrive } from 'lucide-react';
 import { Category } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import CategoryIcon, { ICONS_MAP } from './CategoryIcon';
-import Tooltip from './Tooltip';
 
 interface CategoryManagerProps {
   categories: Category[];
@@ -17,6 +16,7 @@ interface CategoryManagerProps {
   onUserAvatarChange: (avatar: string) => void;
   theme: 'light' | 'dark';
   onThemeChange: (theme: 'light' | 'dark') => void;
+  onOpenGoogleDrive?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -54,7 +54,8 @@ export default function CategoryManager({
   userAvatar,
   onUserAvatarChange,
   theme,
-  onThemeChange
+  onThemeChange,
+  onOpenGoogleDrive
 }: CategoryManagerProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -184,7 +185,6 @@ export default function CategoryManager({
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => onThemeChange('light')}
-              aria-label="Ativar modo claro"
                 className={cn(
                   "p-1.5 rounded-lg transition-all",
                   theme === 'light' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
@@ -194,7 +194,6 @@ export default function CategoryManager({
               </button>
               <button
                 onClick={() => onThemeChange('dark')}
-              aria-label="Ativar modo escuro"
                 className={cn(
                   "p-1.5 rounded-lg transition-all",
                   theme === 'dark' ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
@@ -203,10 +202,7 @@ export default function CategoryManager({
                 <Moon size={14} />
               </button>
             </div>
-            <button 
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
-              aria-label={isProfileOpen ? "Fechar configurações de perfil" : "Abrir configurações de perfil"}
-            >
+            <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
               <ChevronRight className={cn("transition-transform duration-300", isProfileOpen ? "rotate-90" : "")} size={20} />
             </button>
           </div>
@@ -237,7 +233,6 @@ export default function CategoryManager({
                   {tempUserName !== userName && (
                     <button 
                       onClick={() => onUserNameChange(tempUserName)}
-                      aria-label="Salvar novo nome de usuário"
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-emerald-500 text-white rounded-lg shadow-md"
                     >
                       <Check size={16} />
@@ -257,7 +252,7 @@ export default function CategoryManager({
                         "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                         profileAvatarTab === t.id
                           ? (theme === 'dark' ? "bg-slate-700 text-white shadow-sm" : "bg-white text-slate-800 shadow-sm")
-                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                       )}
                     >
                       {t.label}
@@ -332,6 +327,51 @@ export default function CategoryManager({
         </AnimatePresence>
       </section>
 
+      {/* Google Drive Integration Card */}
+      <section className={cn(
+        "p-6 rounded-[2.5rem] border shadow-sm transition-all duration-300",
+        theme === 'dark' ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+      )}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className={cn(
+              "w-11 h-11 rounded-2xl flex items-center justify-center shadow-md",
+              "bg-gradient-to-tr from-blue-600 via-indigo-500 to-sky-400 text-white"
+            )}>
+              <Cloud size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className={cn(
+                  "text-sm font-bold leading-none",
+                  theme === 'dark' ? "text-slate-100" : "text-slate-800"
+                )}>
+                  Google Drive
+                </h3>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 uppercase tracking-wider">
+                  Nuvem
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Backups, extratos CSV e recibos na sua conta Google
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenGoogleDrive}
+            className={cn(
+              "px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 active:scale-95",
+              "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+            )}
+          >
+            <span>Gerenciar</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </section>
+
       <div>
         <div className="flex justify-between items-center mb-6">
           <div className="flex flex-col">
@@ -345,7 +385,6 @@ export default function CategoryManager({
               setNewName('');
               setNewBudget('');
             }}
-          aria-label="Adicionar nova categoria"
             className={cn(
               "p-3 rounded-2xl shadow-lg transition-all duration-300 active:scale-90",
               theme === 'dark' ? "bg-blue-600 text-white shadow-blue-900/20" : "bg-slate-900 text-white shadow-slate-200"
@@ -371,13 +410,7 @@ export default function CategoryManager({
                   "text-base font-bold transition-colors",
                   theme === 'dark' ? "text-slate-100" : "text-slate-800"
                 )}>{editingId ? 'Editar Categoria' : 'Nova Categoria'}</h4>
-                <button 
-                  onClick={() => setIsAdding(false)} 
-                  aria-label="Fechar editor de categoria"
-                  className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
+                <button onClick={() => setIsAdding(false)} className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={20} /></button>
               </div>
               
               <div className="space-y-6">
@@ -528,7 +561,7 @@ export default function CategoryManager({
                                   "flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all",
                                   activeTab === t.id 
                                     ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" 
-                                    : "text-slate-500 dark:text-slate-400"
+                                    : "text-slate-500"
                                 )}
                               >
                                 {t.label}
@@ -673,50 +706,42 @@ export default function CategoryManager({
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Tooltip content="Nova Subcategoria">
-                      <button 
-                        onClick={() => {
-                          setNewParentId(mainCat.id);
-                          setNewColor(mainCat.color);
-                          setNewIcon(mainCat.icon || 'Tag');
-                          setEditingId(null);
-                          setNewName('');
-                          setNewBudget('');
-                          setIsAdding(true);
-                        }}
-                        aria-label={`Adicionar subcategoria em ${mainCat.name}`}
-                        className={cn(
-                          "p-3 transition-colors rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/20",
-                          theme === 'dark' ? "text-slate-400 hover:text-emerald-500" : "text-slate-500 hover:text-emerald-600"
-                        )}
-                      >
-                        <Plus size={18} />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Editar">
+                    <button 
+                      onClick={() => {
+                        setNewParentId(mainCat.id);
+                        setNewColor(mainCat.color);
+                        setNewIcon(mainCat.icon || 'Tag');
+                        setEditingId(null);
+                        setNewName('');
+                        setNewBudget('');
+                        setIsAdding(true);
+                      }}
+                      className={cn(
+                        "p-2 transition-colors rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/20",
+                        theme === 'dark' ? "text-slate-500 hover:text-emerald-500" : "text-slate-400 hover:text-emerald-600"
+                      )}
+                      title="Adicionar subcategoria"
+                    >
+                      <Plus size={18} />
+                    </button>
                     <button 
                       onClick={() => startEdit(mainCat)}
-                      aria-label={`Editar categoria ${mainCat.name}`}
                       className={cn(
-                        "p-3 transition-colors rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20",
-                        theme === 'dark' ? "text-slate-400 hover:text-blue-500" : "text-slate-500 hover:text-blue-600"
+                        "p-2 transition-colors rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20",
+                        theme === 'dark' ? "text-slate-500 hover:text-blue-500" : "text-slate-400 hover:text-blue-600"
                       )}
                     >
                       <Edit2 size={18} />
                     </button>
-                    </Tooltip>
-                    <Tooltip content="Excluir">
-                      <button 
+                    <button 
                       onClick={() => setDeleteConfirmId(mainCat.id)}
-                      aria-label={`Excluir categoria ${mainCat.name}`}
                       className={cn(
-                        "p-3 transition-colors rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/20",
-                        theme === 'dark' ? "text-slate-400 hover:text-rose-500" : "text-slate-500 hover:text-rose-600"
+                        "p-2 transition-colors rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/20",
+                        theme === 'dark' ? "text-slate-500 hover:text-rose-500" : "text-slate-400 hover:text-rose-600"
                       )}
                     >
                       <Trash2 size={18} />
                     </button>
-                    </Tooltip>
                   </div>
                 </div>
                 
@@ -740,7 +765,7 @@ export default function CategoryManager({
                         )}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="text-slate-400 dark:text-slate-500 cursor-grab active:cursor-grabbing p-1">
+                          <div className="text-slate-300 dark:text-slate-700 cursor-grab active:cursor-grabbing p-1">
                              <GripVertical size={14} />
                           </div>
                           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-inner" style={{ backgroundColor: subCat.color }}>
@@ -761,10 +786,9 @@ export default function CategoryManager({
                             onClick={() => {
                               onUpdate(subCat.id, { parentId: undefined });
                             }}
-                            aria-label={`Mover ${subCat.name} para o nível principal`}
                             className={cn(
-                              "p-2.5 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800",
-                              theme === 'dark' ? "text-slate-400 hover:text-amber-500" : "text-slate-500 hover:text-amber-600"
+                              "p-1.5 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800",
+                              theme === 'dark' ? "text-slate-500 hover:text-amber-500" : "text-slate-400 hover:text-amber-600"
                             )}
                             title="Remover do aninhamento"
                           >
@@ -772,20 +796,18 @@ export default function CategoryManager({
                           </button>
                           <button 
                             onClick={() => startEdit(subCat)}
-                            aria-label={`Editar subcategoria ${subCat.name}`}
                             className={cn(
-                              "p-2.5 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800",
-                              theme === 'dark' ? "text-slate-400 hover:text-blue-500" : "text-slate-500 hover:text-blue-600"
+                              "p-1.5 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800",
+                              theme === 'dark' ? "text-slate-500 hover:text-blue-500" : "text-slate-400 hover:text-blue-600"
                             )}
                           >
                             <Edit2 size={14} />
                           </button>
                           <button 
                             onClick={() => setDeleteConfirmId(subCat.id)}
-                            aria-label={`Excluir subcategoria ${subCat.name}`}
                             className={cn(
-                              "p-2.5 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800",
-                              theme === 'dark' ? "text-slate-400 hover:text-rose-500" : "text-slate-500 hover:text-rose-600"
+                              "p-1.5 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800",
+                              theme === 'dark' ? "text-slate-500 hover:text-rose-500" : "text-slate-400 hover:text-rose-600"
                             )}
                           >
                             <Trash2 size={14} />

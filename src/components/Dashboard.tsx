@@ -1,63 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowUpRight, ArrowDownLeft, Sparkles, AlertCircle, Calendar, Target, TrendingUp, Edit2, Check, Medal, Trophy, Star, Zap, Bell } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Sparkles, AlertCircle, Calendar } from 'lucide-react';
 import { Transaction, Category, BillReminder } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format, subMonths } from 'date-fns';
-// canvas-confetti has no bundled TypeScript types in this project; use require to avoid TS import error
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const confetti: any = require('canvas-confetti');
 
 interface DashboardProps {
   transactions: Transaction[];
   reminders: BillReminder[];
   budgets: Category[];
   aiAdvice: string;
-  savingsGoal: number;
-  onSetSavingsGoal: (goal: number) => void;
-  completedMonths: string[];
-  onGoalReached: (monthYear: string) => void;
 }
 
-const BADGES = [
-  { months: 1, label: 'Iniciante', icon: Star, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-  { months: 2, label: 'Focado', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-  { months: 3, label: 'Consistente', icon: Medal, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-  { months: 6, label: 'Mestre', icon: Trophy, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-];
-
-export default function Dashboard({ transactions = [], reminders = [], budgets = [], aiAdvice, savingsGoal, onSetSavingsGoal, completedMonths = [], onGoalReached }: DashboardProps) {
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [tempGoal, setTempGoal] = useState(savingsGoal.toString());
-
-  const currentMonthKey = format(new Date(), 'MM-yyyy');
-
-  // Calculate current consecutive streak
-  const streak = React.useMemo(() => {
-    let count = 0;
-    let checkDate = new Date();
-    
-    // If goal not reached this month yet, start checking from last month
-    if (!completedMonths.includes(currentMonthKey)) {
-      checkDate = subMonths(checkDate, 1);
-    }
-
-    while (completedMonths.includes(format(checkDate, 'MM-yyyy'))) {
-      count++;
-      checkDate = subMonths(checkDate, 1);
-    }
-    return count;
-  }, [completedMonths, currentMonthKey]);
-
-  // Filter current month transactions for savings logic
-  const currentMonthTransactions = transactions.filter(t => {
-    const date = parseISO(t.date);
-    return isWithinInterval(date, {
-      start: startOfMonth(new Date()),
-      end: endOfMonth(new Date())
-    });
-  });
-
+export default function Dashboard({ transactions = [], reminders = [], budgets = [], aiAdvice }: DashboardProps) {
   const totalIncome = (transactions || [])
     .filter(t => t.type === 'income')
     .reduce((acc, t) => acc + t.amount, 0);
@@ -67,36 +21,6 @@ export default function Dashboard({ transactions = [], reminders = [], budgets =
     .reduce((acc, t) => acc + t.amount, 0);
 
   const balance = totalIncome - totalExpenses;
-
-  const monthlyIncome = currentMonthTransactions
-    .filter(t => t.type === 'income')
-    .reduce((acc, t) => acc + t.amount, 0);
-  
-  const monthlyExpenses = currentMonthTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => acc + t.amount, 0);
-
-  const currentSavings = monthlyIncome - monthlyExpenses;
-  const savingsProgress = savingsGoal > 0 ? Math.min((currentSavings / savingsGoal) * 100, 100) : 0;
-  const isGoalReached = savingsGoal > 0 && currentSavings >= savingsGoal;
-
-  useEffect(() => {
-    if (isGoalReached) {
-      onGoalReached(currentMonthKey);
-      const lastFired = sessionStorage.getItem('finwise_goal_celebrated');
-      const currentMonthYear = currentMonthKey;
-      
-      if (lastFired !== currentMonthYear) {
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#3b82f6', '#10b981', '#6366f1']
-        });
-        sessionStorage.setItem('finwise_goal_celebrated', currentMonthYear);
-      }
-    }
-  }, [isGoalReached, currentMonthKey, onGoalReached]);
 
   const nextReminders = (reminders || [])
     .filter(r => !r.isPaid)
@@ -148,118 +72,6 @@ export default function Dashboard({ transactions = [], reminders = [], budgets =
               <p className="font-bold text-lg text-rose-400">{formatCurrency(totalExpenses)}</p>
             </div>
           </div>
-        </div>
-      </motion.div>
-
-      {/* Savings Goal Card */}
-      <motion.div 
-        variants={{
-          hidden: { opacity: 0, y: 20 },
-          show: { opacity: 1, y: 0 }
-        }}
-        className={cn(
-          "col-span-2 rounded-[2rem] p-6 border shadow-sm transition-all duration-300",
-          "bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800"
-        )}
-      >
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <Target size={18} className="text-blue-500" />
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Meta de Economia</h3>
-          </div>
-          <button 
-            onClick={() => {
-              if (isEditingGoal) {
-                onSetSavingsGoal(parseFloat(tempGoal) || 0);
-                setIsEditingGoal(false);
-              } else {
-                setIsEditingGoal(true);
-              }
-            }}
-            className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-blue-500"
-          >
-            {isEditingGoal ? <Check size={16} /> : <Edit2 size={16} />}
-          </button>
-        </div>
-
-        {isEditingGoal ? (
-          <div className="mb-4">
-            <input 
-              type="number"
-              value={tempGoal}
-              onChange={(e) => setTempGoal(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-xl font-bold focus:ring-2 focus:ring-blue-500"
-              placeholder="Quanto quer poupar?"
-              autoFocus
-            />
-          </div>
-        ) : (
-          <div className="flex items-end justify-between mb-4">
-            <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                {formatCurrency(currentSavings < 0 ? 0 : currentSavings)}
-              </p>
-              <p className="text-[10px] text-slate-400 font-bold uppercase">
-                Poupado de {formatCurrency(savingsGoal)}
-              </p>
-            </div>
-            <div className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-extrabold",
-              isGoalReached ? "bg-emerald-100 text-emerald-600" : "bg-blue-50 text-blue-600"
-            )}>
-              {isGoalReached ? "META ATINGIDA! 🎉" : `${Math.round(savingsProgress)}% CONCLUÍDO`}
-            </div>
-          </div>
-        )}
-
-        <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${savingsProgress}%` }}
-            className={cn("h-full transition-colors duration-500", isGoalReached ? "bg-emerald-500" : "bg-blue-500")}
-          />
-        </div>
-      </motion.div>
-
-      {/* Achievements / Badges Section */}
-      <motion.div 
-        variants={{
-          hidden: { opacity: 0, y: 20 },
-          show: { opacity: 1, y: 0 }
-        }}
-        className={cn(
-          "col-span-2 rounded-[2rem] p-6 border shadow-sm transition-all duration-300",
-          "bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800"
-        )}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <Medal size={18} className="text-amber-500" />
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Suas Conquistas</h3>
-          </div>
-          <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-500">
-            STREAK: {streak} {streak === 1 ? 'MÊS' : 'MESES'}
-          </div>
-        </div>
-
-        <div className="flex justify-around items-center gap-2">
-          {BADGES.map((badge, idx) => {
-            const isUnlocked = streak >= badge.months;
-            return (
-              <div key={idx} className="flex flex-col items-center gap-2">
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
-                  isUnlocked ? badge.bg : "bg-slate-50 dark:bg-slate-800/50 opacity-30 grayscale"
-                )}>
-                  <badge.icon size={24} className={isUnlocked ? badge.color : "text-slate-400"} />
-                </div>
-                <span className={cn(
-                  "text-[9px] font-bold uppercase tracking-tighter",
-                  isUnlocked ? "text-slate-700 dark:text-slate-300" : "text-slate-400"
-                )}>{badge.label}</span>
-              </div>
-            );
-          })}
         </div>
       </motion.div>
 
@@ -415,7 +227,7 @@ export default function Dashboard({ transactions = [], reminders = [], budgets =
             "w-12 h-12 rounded-2xl flex items-center justify-center mb-4 shadow-lg transition-all duration-300",
             "bg-emerald-500 shadow-emerald-200 dark:shadow-emerald-900/40 dark:bg-emerald-600"
           )}>
-            <Bell size={24} className="text-white" />
+            <Calendar size={24} className="text-white" />
           </div>
           <h4 className={cn(
             "font-bold text-lg leading-tight uppercase tracking-tight transition-colors duration-300",

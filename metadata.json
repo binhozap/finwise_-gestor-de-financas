@@ -2,5 +2,7 @@
   "name": "FinWise: Gestor de Finanças",
   "description": "App de rastreamento de despesas mensais com gráficos detalhados, orçamentos, lembretes de pagamento e dicas de economia personalizadas com IA.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

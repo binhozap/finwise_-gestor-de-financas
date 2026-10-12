@@ -66,7 +66,7 @@ export default function Analytics({ transactions = [], categories = [], theme }:
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => acc + t.amount, 0);
 
-  const expenseData = (categories || []).map((cat): { id: string, name: string, value: number, color: string } => {
+  const expenseData = (categories || []).map(cat => {
     const total = filteredTransactions
       .filter(t => t.category === cat.name && t.type === 'expense')
       .reduce((acc, t) => acc + t.amount, 0);
@@ -189,10 +189,6 @@ export default function Analytics({ transactions = [], categories = [], theme }:
               />
               <YAxis hide />
               <Tooltip 
-                formatter={(value: any) => {
-                  const v = Array.isArray(value) ? value[0] : value;
-                  return formatCurrency(Number(v) || 0);
-                }}
                 contentStyle={{ 
                   borderRadius: '16px', 
                   border: 'none', 
@@ -236,10 +232,7 @@ export default function Analytics({ transactions = [], categories = [], theme }:
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: any, name?: any, props?: any) => {
-                  const v = Array.isArray(value) ? value[0] : value;
-                  return formatCurrency(Number(v) || 0);
-                }}
+                formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{ 
                   borderRadius: '16px', 
                   border: 'none', 
@@ -327,3 +320,4 @@ export default function Analytics({ transactions = [], categories = [], theme }:
     </motion.div>
   );
 }
+

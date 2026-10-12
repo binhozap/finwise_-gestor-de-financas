@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Calendar, Tag, FileText, Check, ScanLine, Loader2 } from 'lucide-react';
+import { X, Plus, Calendar, Tag, FileText, Check, ScanLine, Loader2, Cloud, Paperclip, Upload } from 'lucide-react';
 import { Category, TransactionType, RecurrenceFrequency } from '../types';
 import { cn } from '../lib/utils';
+import { uploadReceiptToDrive } from '../services/googleDrive';
+import { getAccessToken } from '../services/googleAuth';
 
 import CategoryIcon from './CategoryIcon';
 import BarcodeScanner from './BarcodeScanner';
@@ -22,6 +24,8 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('none');
   const [showScanner, setShowScanner] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
   const sortedCategories = useMemo(() => {
     if (!categories || !Array.isArray(categories)) return [];
@@ -39,12 +43,8 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
     setIsScanning(true);
     setShowScanner(false);
     try {
-      // Usando a API do Open Food Facts com identificação básica para evitar 403
-      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`, {
-        headers: {
-          'User-Agent': 'FinWiseApp/1.0 (Web)'
-        }
-      });
+      // Usando a API do Open Food Facts
+      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
       const data = await response.json();
       
       if (data.status === 1 && data.product) {
@@ -68,23 +68,48 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
     
+    let receiptUrl: string | undefined;
+    let receiptDriveId: string | undefined;
+    let receiptName: string | undefined;
+
+    if (receiptFile) {
+      setIsUploadingReceipt(true);
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          const uploaded = await uploadReceiptToDrive(receiptFile, note || category);
+          receiptUrl = uploaded.webViewLink;
+          receiptDriveId = uploaded.id;
+          receiptName = uploaded.name;
+        }
+      } catch (err) {
+        console.warn('Não foi possível salvar recibo no Drive:', err);
+      } finally {
+        setIsUploadingReceipt(false);
+      }
+    }
+
     onAdd({
       type,
       amount: parseFloat(amount),
       category,
       note,
       date: new Date().toISOString(),
-      frequency
+      frequency,
+      receiptUrl,
+      receiptDriveId,
+      receiptName
     });
     
     // Reset and close
     setAmount('');
     setNote('');
     setFrequency('none');
+    setReceiptFile(null);
     onClose();
   };
 
@@ -121,14 +146,10 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
               "text-xl font-bold tracking-tight transition-colors duration-300",
               "text-slate-800 dark:text-slate-100"
             )}>Nova Transação</h2>
-            <button 
-              onClick={onClose} 
-              aria-label="Fechar formulário"
-              className={cn(
-                "p-2.5 rounded-full transition-all duration-300",
-                "bg-slate-100 text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-slate-300"
-              )}
-            >
+            <button onClick={onClose} className={cn(
+              "p-2 rounded-full transition-all duration-300",
+              "bg-slate-100 text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-slate-300"
+            )}>
               <X size={20} />
             </button>
           </div>
@@ -180,7 +201,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
                   className={cn(
                     "w-full border rounded-2xl py-4 pl-16 pr-6 text-2xl font-bold focus:outline-none focus:ring-4 transition-all duration-300",
                     "bg-slate-50 border-slate-100 text-slate-800 focus:ring-blue-50 placeholder:text-slate-200",
-                    "dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/20 dark:placeholder:text-slate-500"
+                    "dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/20 dark:placeholder:text-slate-700"
                   )}
                 />
               </div>
@@ -196,7 +217,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
                     type="button"
                     onClick={() => setCategory(cat.name)}
                     className={cn(
-                    "py-3 px-1 rounded-xl border flex flex-col items-center gap-1 transition-all duration-300 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none",
+                      "py-2 px-1 rounded-xl border flex flex-col items-center gap-1 transition-all duration-300 shadow-sm",
                       category === cat.name 
                         ? (type === 'expense' 
                             ? "bg-rose-500 border-rose-500 text-white shadow-rose-200 dark:shadow-rose-900/40" 
@@ -233,7 +254,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
                     className={cn(
                       "w-full border rounded-2xl py-4 pl-12 pr-6 text-sm font-medium focus:outline-none focus:ring-2 transition-all duration-300",
                       "bg-slate-50 border-slate-100 focus:ring-blue-100",
-                      "dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40 dark:placeholder:text-slate-500"
+                      "dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40"
                     )}
                   />
                 </div>
@@ -250,6 +271,56 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
                 >
                   {isScanning ? <Loader2 size={20} className="animate-spin" /> : <ScanLine size={20} className="group-hover:scale-110 transition-transform" />}
                 </button>
+              </div>
+            </div>
+
+            {/* Receipt Attachment (Google Drive) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Cloud size={12} className="text-blue-500" />
+                  <span>Comprovante (Google Drive)</span>
+                </label>
+                {receiptFile && (
+                  <button
+                    type="button"
+                    onClick={() => setReceiptFile(null)}
+                    className="text-[10px] text-rose-500 hover:underline font-bold"
+                  >
+                    Remover
+                  </button>
+                )}
+              </div>
+
+              <div className={cn(
+                "p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors",
+                "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800"
+              )}>
+                {receiptFile ? (
+                  <div className="flex items-center gap-2 overflow-hidden flex-1">
+                    <Paperclip size={16} className="text-blue-500 shrink-0" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                      {receiptFile.name}
+                    </span>
+                    <span className="text-[10px] text-slate-400 shrink-0">
+                      ({(receiptFile.size / 1024).toFixed(0)} KB)
+                    </span>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 cursor-pointer w-full text-slate-400 hover:text-blue-500 transition-colors">
+                    <Paperclip size={16} className="shrink-0" />
+                    <span className="text-xs font-medium">Anexar foto ou PDF do recibo</span>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setReceiptFile(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
             </div>
 
@@ -274,7 +345,7 @@ export default function AddTransactionModal({ isOpen, onClose, onAdd, categories
                       "flex-1 min-w-[60px] py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
                       frequency === freq.value 
                         ? "bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400" 
-                        : "text-slate-500 dark:text-slate-300"
+                        : "text-slate-500 dark:text-slate-400"
                     )}
                   >
                     {freq.label}
